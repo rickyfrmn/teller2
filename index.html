@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistem Antrian SPMB</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+      max-width: 800px;
+      margin: auto;
+    }
+    .card {
+      background: white;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 15px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    }
+    h1, h2 {
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      margin: 5px 10px 5px 0;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .queue-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #ddd;
+    }
+    #reminder-status {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <!-- PENGINGAT -->
+  <div class="card">
+    <h2>Pengingat Loket</h2>
+    <button onclick="toggleReminder()">Nonaktifkan Pengingat</button>
+    <p id="reminder-status">🔊 Pengingat aktif</p>
+  </div>
+
+  <!-- SISTEM ANTRIAN -->
+  <div class="card">
+    <h1>Sistem Antrian SPMB</h1>
+    <button onclick="call()">Panggil</button>
+    <button onclick="recall()">Ulang</button>
+    <button onclick="reset()">Reset</button>
+    <div id="info"></div>
+  </div>
+
+  <!-- DAFTAR ANTRIAN -->
+  <div class="card">
+    <h2>Daftar Antrian</h2>
+    <div id="queue-list"></div>
+  </div>
+
+  <audio id="dingdong" src="ding-dong.mp3" preload="auto"></audio>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
+  <script>
+    // Ganti dengan konfigurasi Firebase kamu
+    const firebaseConfig = {
+      aapiKey: "AIzaSyAyaxMc6HMa_Pi9MAbYkhABVSI9S-L9i3s",
+      authDomain: "teller-33d2c.firebaseapp.com",
+      databaseURL: "https://teller-33d2c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "teller-33d2c",
+      storageBucket: "teller-33d2c.firebasestorage.app",
+      messagingSenderId: "262230345273",
+      appId: "1:262230345273:web:808faf1600b3b1bca3afe8",
+      measurementId: "G-FJQMCDMSHE"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const info = document.getElementById('info');
+    const bell = document.getElementById('dingdong');
+
+    function speak(text) {
+      const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'id-ID';
+      utter.rate = 0.9;
+      utter.pitch = 1.2;
+      if (voice) utter.voice = voice;
+      speechSynthesis.speak(utter);
+    }
+
+    function speakWithDing(text) {
+      const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'id-ID';
+      utter.rate = 0.9;
+      utter.pitch = 1.2;
+      if (voice) utter.voice = voice;
+      bell.play();
+      bell.onended = () => speechSynthesis.speak(utter);
+    }
+
+    function call() {
+      db.ref("antrian").get().then(snap => {
+        let num = (snap.exists() && snap.val().number) || 0;
+        db.ref("antrian").set({ number: num + 1, calls: 1 });
+      });
+    }
+
+    function recall() {
+      db.ref("antrian").get().then(snap => {
+        if (snap.exists()) {
+          let data = snap.val();
+          db.ref("antrian").set({ number: data.number, calls: (data.calls || 1) + 1 });
+        }
+      });
+    }
+
+    function reset() {
+      if (confirm("Yakin ingin mereset antrian ke 0?")) {
+        db.ref("antrian").set({ number: 0, calls: 0 });
+      }
+    }
+
+    db.ref("antrian").on("value", snap => {
+      if (snap.exists()) {
+        const data = snap.val();
+        const display = String(data.number).padStart(3, '0');
+        info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
+        updateQueue(data);
+        if (data.number > 0) {
+          speakWithDing(`Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
+        }
+      } else {
+        info.innerHTML = `<p>Belum ada antrian</p>`;
+      }
+    });
+
+    function updateQueue(data) {
+      const list = document.getElementById('queue-list');
+      list.innerHTML = '';
+      const display = String(data.number).padStart(3, '0');
+      const row = document.createElement("div");
+      row.className = "queue-item";
+      row.innerHTML = `<span>${display}</span><span>${data.calls}x</span>`;
+      list.appendChild(row);
+    }
+
+    // 🔁 Pengingat Loket Otomatis (tanpa ding-dong)
+    const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda... antri sesuai dengan nomor antrian.";
+    let reminderActive = true;
+    let reminderIntervalId;
+
+    function startReminder() {
+      speak(reminderText);
+      reminderIntervalId = setInterval(() => {
+        speak(reminderText);
+      }, 10 * 60 * 1000);
+    }
+
+    function stopReminder() {
+      clearInterval(reminderIntervalId);
+      speechSynthesis.cancel();
+    }
+
+    function toggleReminder() {
+      reminderActive = !reminderActive;
+      const status = document.getElementById('reminder-status');
+      if (reminderActive) {
+        status.textContent = "🔊 Pengingat aktif";
+        startReminder();
+      } else {
+        status.textContent = "🔇 Pengingat nonaktif";
+        stopReminder();
+      }
+    }
+
+    window.speechSynthesis.onvoiceschanged = () => {};
+    window.onload = () => {
+      startReminder();
+    };
+  </script>
+</body>
+</html>
