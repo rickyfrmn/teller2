@@ -47,11 +47,10 @@
   </style>
 </head>
 <body>
-
   <!-- PENGINGAT -->
   <div class="card">
     <h2>Pengingat Loket</h2>
-    <button onclick="toggleReminder()">Toggle Pengingat</button>
+    <button onclick="toggleReminder()">Nonaktifkan Pengingat</button>
     <p id="reminder-status">🔊 Pengingat aktif</p>
   </div>
 
@@ -77,9 +76,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
-    // 🔧 GANTI konfigurasi ini dengan milikmu dari Firebase Console
+    // Ganti dengan konfigurasi Firebase kamu
     const firebaseConfig = {
-      apiKey: "AIzaSyAyaxMc6HMa_Pi9MAbYkhABVSI9S-L9i3s",
+      aapiKey: "AIzaSyAyaxMc6HMa_Pi9MAbYkhABVSI9S-L9i3s",
       authDomain: "teller-33d2c.firebaseapp.com",
       databaseURL: "https://teller-33d2c-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "teller-33d2c",
@@ -145,7 +144,7 @@
         info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
         updateQueue(data);
         if (data.number > 0) {
-          speakWithDing(`Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
+          speakWithDing(`Mohon perhatian... Nomor antrian... ${data.number}, silakan ke loket verifikasi.`);
         }
       } else {
         info.innerHTML = `<p>Belum ada antrian</p>`;
@@ -162,7 +161,7 @@
       list.appendChild(row);
     }
 
-    // 🔁 Pengingat Loket Real-Time
+    // 🔁 Pengingat Loket Otomatis (tanpa ding-dong)
     const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda... antri sesuai dengan nomor antrian.";
     let reminderActive = true;
     let reminderIntervalId;
@@ -180,24 +179,21 @@
     }
 
     function toggleReminder() {
-      db.ref("pengingat").set({ aktif: !reminderActive });
+      reminderActive = !reminderActive;
+      const status = document.getElementById('reminder-status');
+      if (reminderActive) {
+        status.textContent = "🔊 Pengingat aktif";
+        startReminder();
+      } else {
+        status.textContent = "🔇 Pengingat nonaktif";
+        stopReminder();
+      }
     }
 
-    db.ref("pengingat").on("value", snap => {
-      if (snap.exists()) {
-        reminderActive = snap.val().aktif;
-        const status = document.getElementById('reminder-status');
-        if (reminderActive) {
-          status.textContent = "🔊 Pengingat aktif";
-          startReminder();
-        } else {
-          status.textContent = "🔇 Pengingat nonaktif";
-          stopReminder();
-        }
-      }
-    });
-
     window.speechSynthesis.onvoiceschanged = () => {};
+    window.onload = () => {
+      startReminder();
+    };
   </script>
 </body>
 </html>
