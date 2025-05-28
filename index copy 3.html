@@ -47,10 +47,11 @@
   </style>
 </head>
 <body>
+
   <!-- PENGINGAT -->
   <div class="card">
     <h2>Pengingat Loket</h2>
-    <button onclick="toggleReminder()">Nonaktifkan Pengingat</button>
+    <button onclick="toggleReminder()">Toggle Pengingat</button>
     <p id="reminder-status">🔊 Pengingat aktif</p>
   </div>
 
@@ -69,14 +70,14 @@
     <div id="queue-list"></div>
   </div>
 
-  <audio id="dingdong" src="ding-dong.mp3" preload="auto"></audio>
+  <audio id="dingdong" src="ding-dong2.mp3" preload="auto"></audio>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
-    // Ganti dengan konfigurasi Firebase kamu
+    // 🔧 GANTI konfigurasi ini dengan milikmu dari Firebase Console
     const firebaseConfig = {
       apiKey: "AIzaSyAyaxMc6HMa_Pi9MAbYkhABVSI9S-L9i3s",
       authDomain: "teller-33d2c.firebaseapp.com",
@@ -161,8 +162,8 @@
       list.appendChild(row);
     }
 
-    // 🔁 Pengingat Loket Otomatis (tanpa ding-dong)
-    const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda... antri sesuai dengan nomor antrian.";
+    // 🔁 Pengingat Loket Real-Time
+    const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda telah memiliki nomor antrian dari loket pengecekan berkas.";
     let reminderActive = true;
     let reminderIntervalId;
 
@@ -179,21 +180,24 @@
     }
 
     function toggleReminder() {
-      reminderActive = !reminderActive;
-      const status = document.getElementById('reminder-status');
-      if (reminderActive) {
-        status.textContent = "🔊 Pengingat aktif";
-        startReminder();
-      } else {
-        status.textContent = "🔇 Pengingat nonaktif";
-        stopReminder();
-      }
+      db.ref("pengingat").set({ aktif: !reminderActive });
     }
 
+    db.ref("pengingat").on("value", snap => {
+      if (snap.exists()) {
+        reminderActive = snap.val().aktif;
+        const status = document.getElementById('reminder-status');
+        if (reminderActive) {
+          status.textContent = "🔊 Pengingat aktif";
+          startReminder();
+        } else {
+          status.textContent = "🔇 Pengingat nonaktif";
+          stopReminder();
+        }
+      }
+    });
+
     window.speechSynthesis.onvoiceschanged = () => {};
-    window.onload = () => {
-      startReminder();
-    };
   </script>
 </body>
 </html>
