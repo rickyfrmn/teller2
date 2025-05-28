@@ -48,12 +48,6 @@
 </head>
 <body>
 
-  <!-- TOMBOL AKTIFKAN SUARA -->
-  <div class="card">
-    <h2>Aktifkan Suara</h2>
-    <button onclick="enableAudio()">Klik untuk mengaktifkan suara</button>
-  </div>
-
   <!-- PENGINGAT -->
   <div class="card">
     <h2>Pengingat Loket</h2>
@@ -76,44 +70,37 @@
     <div id="queue-list"></div>
   </div>
 
-  <audio id="dingdong" src="pesawat.mp3" preload="auto"></audio>
+  <audio id="dingdong" src="ding-dong.mp3" preload="auto"></audio>
 
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
-    // 🔧 GANTI dengan konfigurasi Firebase milikmu
+    // 🔧 GANTI konfigurasi ini dengan milikmu dari Firebase Console
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: "AIzaSyAyaxMc6HMa_Pi9MAbYkhABVSI9S-L9i3s",
+      authDomain: "teller-33d2c.firebaseapp.com",
+      databaseURL: "https://teller-33d2c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "teller-33d2c",
+      storageBucket: "teller-33d2c.firebasestorage.app",
+      messagingSenderId: "262230345273",
+      appId: "1:262230345273:web:808faf1600b3b1bca3afe8",
+      measurementId: "G-FJQMCDMSHE"
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
     const info = document.getElementById('info');
     const bell = document.getElementById('dingdong');
-
-    function enableAudio() {
-      const dummy = new SpeechSynthesisUtterance("Suara aktif");
-      dummy.lang = "id-ID";
-      speechSynthesis.speak(dummy);
-      const btn = document.querySelector('button[onclick="enableAudio()"]');
-      if (btn) btn.style.display = 'none';
-      alert("✅ Suara diaktifkan di perangkat ini.");
-    }
 
     function speak(text) {
       const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'id-ID';
-      utter.rate = 0.9;
-      utter.pitch = 1.2;
+      utter.rate = 0.85;
+      utter.pitch = 1;
       if (voice) utter.voice = voice;
       speechSynthesis.speak(utter);
     }
@@ -122,8 +109,8 @@
       const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
       const utter = new SpeechSynthesisUtterance(text);
       utter.lang = 'id-ID';
-      utter.rate = 0.9;
-      utter.pitch = 1.2;
+      utter.rate = 0.85;
+      utter.pitch = 1;
       if (voice) utter.voice = voice;
       bell.play();
       bell.onended = () => speechSynthesis.speak(utter);
@@ -158,7 +145,7 @@
         info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
         updateQueue(data);
         if (data.number > 0) {
-          speakWithDing(`Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
+          speakWithDing(`Mohon perhatian... Nomor antrian... ${data.number}, silakan ke loket verifikasi.`);
         }
       } else {
         info.innerHTML = `<p>Belum ada antrian</p>`;
