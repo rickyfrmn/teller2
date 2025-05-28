@@ -95,109 +95,128 @@
     const info = document.getElementById('info');
     const bell = document.getElementById('dingdong');
 
-    function speak(text) {
-      const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'id-ID';
-      utter.rate = 0.85;
-      utter.pitch = 1;
-      if (voice) utter.voice = voice;
-      speechSynthesis.speak(utter);
-    }
+    function enableAudio() {
+    const utter = new SpeechSynthesisUtterance("Suara aktif");
+    utter.lang = "id-ID";
+    speechSynthesis.speak(utter);
+    document.querySelector('button[onclick="enableAudio()"]').style.display = "none";
+  }
 
-    function speakWithDing(text) {
-      const voice = speechSynthesis.getVoices().find(v => v.lang === 'id-ID');
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = 'id-ID';
-      utter.rate = 0.85;
-      utter.pitch = 1;
-      if (voice) utter.voice = voice;
-      bell.play();
-      bell.onended = () => speechSynthesis.speak(utter);
-    }
+  function speak(text) {
+    const voice = speechSynthesis.getVoices().find(v => v.lang === "id-ID");
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "id-ID";
+    utter.rate = 0.85;
+    utter.pitch = 1;
+    if (voice) utter.voice = voice;
+    speechSynthesis.speak(utter);
+  }
 
-    function call() {
-      db.ref("antrian").get().then(snap => {
-        let num = (snap.exists() && snap.val().number) || 0;
-        db.ref("antrian").set({ number: num + 1, calls: 1 });
-      });
-    }
+  // ✅ VERSI DITINGKATKAN: Tunggu jika ada suara pengingat
+  function speakWithDing(text) {
+    const voice = speechSynthesis.getVoices().find(v => v.lang === "id-ID");
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.lang = "id-ID";
+    utter.rate = 0.85;
+    utter.pitch = 1;
+    if (voice) utter.voice = voice;
 
-    function recall() {
-      db.ref("antrian").get().then(snap => {
-        if (snap.exists()) {
-          let data = snap.val();
-          db.ref("antrian").set({ number: data.number, calls: (data.calls || 1) + 1 });
-        }
-      });
-    }
-
-    function reset() {
-      if (confirm("Yakin ingin mereset antrian ke 0?")) {
-        db.ref("antrian").set({ number: 0, calls: 0 });
-      }
-    }
-
-    db.ref("antrian").on("value", snap => {
-      if (snap.exists()) {
-        const data = snap.val();
-        const display = String(data.number).padStart(3, '0');
-        info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
-        updateQueue(data);
-        if (data.number > 0) {
-          speakWithDing(`Mohon perhatian... Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
-        }
+    function speakAfterBell() {
+      if (!speechSynthesis.speaking) {
+        bell.play().then(() => {
+          bell.onended = () => speechSynthesis.speak(utter);
+        }).catch(() => {
+          speechSynthesis.speak(utter);
+        });
       } else {
-        info.innerHTML = `<p>Belum ada antrian</p>`;
+        setTimeout(speakAfterBell, 1000); // tunggu 1 detik lalu cek lagi
       }
+    }
+
+    speakAfterBell();
+  }
+
+  function call() {
+    db.ref("antrian").get().then(snap => {
+      let num = (snap.exists() && snap.val().number) || 0;
+      db.ref("antrian").set({ number: num + 1, calls: 1 });
     });
+  }
 
-    function updateQueue(data) {
-      const list = document.getElementById('queue-list');
-      list.innerHTML = '';
-      const display = String(data.number).padStart(3, '0');
-      const row = document.createElement("div");
-      row.className = "queue-item";
-      row.innerHTML = `<span>${display}</span><span>${data.calls}x</span>`;
-      list.appendChild(row);
-    }
-
-    // 🔁 Pengingat Loket Real-Time
-    const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda telah memiliki nomor antrian dari loket pengecekan berkas.";
-    let reminderActive = true;
-    let reminderIntervalId;
-
-    function startReminder() {
-      speak(reminderText);
-      reminderIntervalId = setInterval(() => {
-        speak(reminderText);
-      }, 10 * 60 * 1000);
-    }
-
-    function stopReminder() {
-      clearInterval(reminderIntervalId);
-      speechSynthesis.cancel();
-    }
-
-    function toggleReminder() {
-      db.ref("pengingat").set({ aktif: !reminderActive });
-    }
-
-    db.ref("pengingat").on("value", snap => {
+  function recall() {
+    db.ref("antrian").get().then(snap => {
       if (snap.exists()) {
-        reminderActive = snap.val().aktif;
-        const status = document.getElementById('reminder-status');
-        if (reminderActive) {
-          status.textContent = "🔊 Pengingat aktif";
-          startReminder();
-        } else {
-          status.textContent = "🔇 Pengingat nonaktif";
-          stopReminder();
-        }
+        let data = snap.val();
+        db.ref("antrian").set({ number: data.number, calls: (data.calls || 1) + 1 });
       }
     });
+  }
 
-    window.speechSynthesis.onvoiceschanged = () => {};
+  function reset() {
+    if (confirm("Yakin ingin mereset antrian ke 0?")) {
+      db.ref("antrian").set({ number: 0, calls: 0 });
+    }
+  }
+
+  db.ref("antrian").on("value", snap => {
+    let data = snap.exists() ? snap.val() : { number: 0, calls: 0 };
+    const display = String(data.number).padStart(3, "0");
+    info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
+    updateQueue(data);
+
+    if (data.number > 0 && snap.exists()) {
+      speakWithDing(`Mohon perhatian... Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
+    }
+  });
+
+  function updateQueue(data) {
+    const list = document.getElementById('queue-list');
+    list.innerHTML = '';
+    const display = String(data.number).padStart(3, '0');
+    const row = document.createElement("div");
+    row.className = "queue-item";
+    row.innerHTML = `<span>${display}</span><span>${data.calls}x</span>`;
+    list.appendChild(row);
+  }
+
+  // 🔁 Pengingat Loket
+  const reminderText = "Saat ini, Anda berada di... loket verifikasi berkas. Mohon, tidak jauh dari lokasi. Pastikan Anda telah memiliki nomor antrian dari loket pengecekan berkas.";
+  let reminderActive = true;
+  let reminderIntervalId;
+
+  function startReminder() {
+    speak(reminderText);
+    reminderIntervalId = setInterval(() => {
+      speak(reminderText);
+    }, 10 * 60 * 1000);
+  }
+
+  function stopReminder() {
+    clearInterval(reminderIntervalId);
+    speechSynthesis.cancel();
+  }
+
+  function toggleReminder() {
+    db.ref("pengingat").set({ aktif: !reminderActive });
+  }
+
+  db.ref("pengingat").on("value", snap => {
+    if (snap.exists()) {
+      reminderActive = snap.val().aktif;
+      const status = document.getElementById("reminder-status");
+      if (reminderActive) {
+        status.textContent = "🔊 Pengingat aktif";
+        startReminder();
+      } else {
+        status.textContent = "🔇 Pengingat nonaktif";
+        stopReminder();
+      }
+    }
+  });
+
+  window.speechSynthesis.onvoiceschanged = () => {
+    console.log("✅ Voice list siap digunakan.");
+  };
   </script>
 </body>
 </html>
