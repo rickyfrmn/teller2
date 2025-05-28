@@ -145,7 +145,7 @@
         info.innerHTML = `<p>Nomor Antrian: <strong>${display}</strong> (${data.calls}x)</p>`;
         updateQueue(data);
         if (data.number > 0) {
-          speakWithDing(`Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
+          speakWithDing(`Mohon perhatian... Nomor antrian ${data.number}, silakan ke loket verifikasi.`);
         }
       } else {
         info.innerHTML = `<p>Belum ada antrian</p>`;
